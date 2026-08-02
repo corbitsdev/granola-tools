@@ -5,8 +5,34 @@
 // Interchange tool, standalone, with nothing hub-shaped attached. The
 // webhook extension lives at @corbits/granola/ingress and depends on this
 // module — never the reverse. See ARCHITECTURE.md.
-export { GranolaClient } from "./client.js";
-export type { GranolaClientOptions } from "./client.js";
+export {
+  createGranolaClient,
+  transcriptText,
+  speakerLabel,
+  GranolaApiError,
+  GranolaNote,
+} from "./client.js";
+export type {
+  GranolaClient,
+  CreateGranolaClientOptions,
+  GetNoteOptions,
+  ListNotesOptions,
+  GranolaNoteSummary,
+  GranolaListNotesResponse,
+  GranolaFolder,
+  GranolaListFoldersResponse,
+  ListFoldersOptions,
+} from "./client.js";
+
+export {
+  GranolaBucketType,
+  GranolaBucketsArray,
+} from "./types.js";
+export type {
+  GranolaTranscriptSegment,
+  GranolaTranscriptSpeaker,
+  GranolaBucket,
+} from "./types.js";
 
 export { fetchNoteTool, searchNotesTool, GRANOLA_TOOL_DEFINITIONS } from "./tools.js";
 export type { GranolaToolDefinition } from "./tools.js";

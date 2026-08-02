@@ -19,3 +19,15 @@ export type {
   GranolaEventType,
 } from "./webhook.js";
 export type { GranolaBindingsPort, GranolaBindingsLoadResult } from "./bindings-port.js";
+
+export { createGranolaBindingStore } from "./binding-store.js";
+export type {
+  GranolaBindingStore,
+  CreateGranolaBindingStoreOptions,
+} from "./binding-store.js";
+
+export {
+  ensureGranolaWebhook,
+  reconcileGranolaWebhookFolders,
+} from "./webhook-registration.js";
+export type { EnsureGranolaWebhookOptions } from "./webhook-registration.js";
