@@ -57,6 +57,9 @@
     "test": "bun test src",
     "test:coverage": "bun test --coverage src"
   },
+  "dependencies": {
+    "arktype": "^2.1.29"
+  },
   "devDependencies": {
     "@types/bun": "1.1.14",
     "@types/node": "22.10.5",
