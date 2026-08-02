@@ -1,0 +1,65 @@
+{
+  "name": "@corbits/granola",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "LGPL-2.1-only",
+  "description": "Granola meeting-notes tools for Corbits agents, with an optional webhook ingress extension.",
+  "keywords": [
+    "corbits",
+    "interchange",
+    "intx",
+    "granola",
+    "tools",
+    "webhook",
+    "ingress"
+  ],
+  "author": "Corbits",
+  "homepage": "https://github.com/corbitsdev/corbits-granola#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/corbitsdev/corbits-granola.git"
+  },
+  "bugs": {
+    "url": "https://github.com/corbitsdev/corbits-granola/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/tools/index.js",
+  "types": "./dist/tools/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/tools/index.ts",
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.js"
+    },
+    "./ingress": {
+      "bun": "./src/ingress/index.ts",
+      "types": "./dist/ingress/index.d.ts",
+      "default": "./dist/ingress/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "prepack": "bun run build",
+    "check-deps": "bun run scripts/check-deps.ts",
+    "test:tools": "bun test src/tools",
+    "test:ingress": "bun test src/ingress",
+    "test": "bun test src",
+    "test:coverage": "bun test --coverage src"
+  },
+  "devDependencies": {
+    "@types/bun": "1.1.14",
+    "@types/node": "22.10.5",
+    "typescript": "5.7.2"
+  }
+}
