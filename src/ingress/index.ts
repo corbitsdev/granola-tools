@@ -5,3 +5,4 @@
 // structurally enforced.
 export { verifyGranolaSignature } from "./webhook.js";
 export type { GranolaIngressOptions, GranolaWebhookHandler } from "./webhook.js";
+export type { GranolaBindingsPort, GranolaBindingsLoadResult } from "./bindings-port.js";
