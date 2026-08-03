@@ -2,7 +2,7 @@
  * Granola webhook verification and payload codec.
  *
  * Pure, unit-testable functions — no Hono, no network, no side effects.
- * `hub/src/mounts/granola.ts` wires these into the actual route.
+ * `./mount.ts` wires these into the actual Hono route.
  *
  * Standard Webhooks (docs.granola.ai/webhooks): the signed content is
  * `{webhook-id}.{webhook-timestamp}.{raw body}`, HMAC-SHA256 keyed with the

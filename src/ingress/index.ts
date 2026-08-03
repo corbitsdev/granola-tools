@@ -31,3 +31,10 @@ export {
   reconcileGranolaWebhookFolders,
 } from "./webhook-registration.js";
 export type { EnsureGranolaWebhookOptions } from "./webhook-registration.js";
+
+export { mountGranolaWebhook } from "./mount.js";
+export type {
+  OnGranolaEvent,
+  MountGranolaWebhookOptions,
+  MountedGranolaWebhook,
+} from "./mount.js";
