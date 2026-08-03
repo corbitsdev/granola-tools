@@ -1,21 +1,24 @@
 # @corbits/granola
 
-Granola meeting-notes client and agent tools for Corbits hosts, plus an optional
-webhook ingress extension. The base entry point is a plain REST client
-(`getNote` / `listNotes` / `listFolders`) and two grantable tool definitions;
-the `/ingress` entry point receives Granola webhooks, verifies signatures,
-keeps the Granola-side webhook registration converged, and dispatches note
-events to your handlers.
+Granola meeting-notes client and agent tools for Corbits hosts, plus optional
+webhook ingress and ingest extensions. The base entry point is a plain REST
+client (`getNote` / `listNotes` / `listFolders`) and two grantable tool
+definitions; `/ingress` receives Granola webhooks, verifies signatures, and
+keeps the Granola-side webhook registration converged; `/ingest` is the
+host-agnostic pipeline that turns an acked webhook event into a persisted
+transcript and dispatched bucket handler.
 
-## Two entry points, one dependency direction
+## Three entry points, one dependency direction
 
 | Entry point | What it is | Depends on |
 | --- | --- | --- |
 | `@corbits/granola` | Granola API client, note/folder types, agent tool definitions | nothing hub-shaped |
 | `@corbits/granola/ingress` | Webhook mount, signature verification, folder-binding store, webhook registration | `@corbits/granola`, `hono` (peer) |
+| `@corbits/granola/ingest` | Webhook event → note fetch → bucket dispatch → knowledge capture pipeline | `@corbits/granola` |
 
-The tools are usable standalone. The ingress extension depends on the tools,
-never the reverse — enforced structurally, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+The tools are usable standalone. `/ingress` and `/ingest` each depend on the
+tools, never the reverse — enforced structurally, see
+[ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Install
 
@@ -128,6 +131,36 @@ The webhook route is `POST /api/granola/webhook` on whatever app you pass in.
 A failed `onEvent` after ack is not redelivered by Granola; a later event for
 the same note (or a manual re-drop) is the recovery path.
 
+## Quickstart: ingest pipeline
+
+`/ingress` mounts the webhook, verifies it, and acks; `/ingest` is the
+processing pipeline behind it — everything downstream of that ack: fetch the
+note, resolve its bucket, persist the transcript, capture knowledge, then
+dispatch to a bucket-type handler. It's chat- and host-agnostic, generic over
+`TRef` (whatever your transcript store's `persist` returns) and `TAnchor`
+(whatever your `lifecycle.onProcessingStarted` returns) — both threaded
+through unexamined.
+
+```ts
+import { createGranolaClient } from "@corbits/granola";
+import { mountGranolaWebhook } from "@corbits/granola/ingress";
+import { createGranolaIngest } from "@corbits/granola/ingest";
+
+const ingest = createGranolaIngest({
+  client: createGranolaClient({ apiKey, baseUrl }),
+  bindingStore,
+  transcripts: myTranscriptStore, // { hasTranscript, persist } -> TRef
+  captureKnowledge: myKnowledgeCapture,
+  lifecycle: myLifecycle, // onProcessingStarted, onTranscriptReady, ... -> TAnchor
+  handlers: { diligence: myDiligenceHandler, internal: myInternalHandler },
+});
+
+mountGranolaWebhook(app, { secret, onEvent: ingest });
+
+// A host's "reprocess" affordance re-enters bypassing the already-processed gate.
+await ingest.reprocess(noteId);
+```
+
 ## API surface
 
 `@corbits/granola`
@@ -145,6 +178,13 @@ the same note (or a manual re-drop) is the recovery path.
 - `reconcileGranolaWebhookFolders(options)` — keeps the registration's `folder_ids` matching your bindings
 - `createGranolaBindingStore(options)` — durable folder bindings over a host-supplied `GranolaBindingsPort`
 - `verifyGranolaSignature` / `signGranolaPayload` / `parseGranolaPayload` — signature primitives, if you mount by hand
+
+`@corbits/granola/ingest`
+
+- `createGranolaIngest(options)` → `GranolaIngest` — the webhook `onEvent` handler, plus `.reprocess(noteId)` / `.reprocessPinned(noteId, companies)` re-entry
+- `GranolaIngestHandlers`, `GranolaBucketHandler`, `GranolaBucketHandlerContext`, `GranolaThreadAnchor` — the per-bucket-type handler contract
+- `GranolaIngestLifecycle` — the human-visible-event hooks a host implements to render its own copy
+- `GranolaTranscriptStore`, `GranolaKnowledgeCapture` — the persistence and enrichment ports a host supplies
 
 ## Used in production
 
