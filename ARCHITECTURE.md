@@ -1,17 +1,23 @@
 # Architecture
 
-## Two faces, one dependency direction
+## Three faces, one dependency direction
 
-This package has two independent faces, each with its own source directory:
+This package has three independent faces, each with its own source directory:
 
 - `src/tools/` — the Granola API client and the tools an agent calls (fetch a note,
   search notes). Published as the package root, `@corbits/granola`.
 - `src/ingress/` — the extension that receives Granola webhooks, verifies signatures,
   and dispatches notes to handlers. Published as the subpath export
   `@corbits/granola/ingress`.
+- `src/ingest/` — the host-agnostic pipeline that turns an acked webhook event into a
+  persisted transcript and a dispatched bucket handler: fetch note, resolve bucket,
+  persist, capture knowledge, hand off. Published as the subpath export
+  `@corbits/granola/ingest`.
 
-`src/ingress` depends on `src/tools` for the client. `src/tools` must never depend on
-`src/ingress`, or on any hub, mounting, extension or webhook machinery at all — the
+`src/ingress` depends on `src/tools` for the client. `src/ingest` depends on both —
+`src/tools` for the client and note shapes, `src/ingress` for the binding store and
+webhook payload it processes. `src/tools` must never depend on `src/ingress` or
+`src/ingest`, or on any hub, mounting, extension or webhook machinery at all — the
 operator requirement is that someone can import the tools and grant them to any agent
 like any other plain Interchange tool, and nothing hub-shaped comes along for the ride.
 

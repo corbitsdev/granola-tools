@@ -39,9 +39,10 @@ const log = getLogger(["granola", "ingest"]);
 /** How long to wait before the one retry for a note whose transcript isn't ready yet. */
 const DEFAULT_RETRY_DELAY_MS = 60_000;
 
-export type GranolaIngestHandlers<TRef = unknown> = Partial<
-  Record<GranolaBucketType, GranolaBucketHandler<TRef>>
->;
+export type GranolaIngestHandlers<
+  TRef = unknown,
+  TAnchor = GranolaThreadAnchor,
+> = Partial<Record<GranolaBucketType, GranolaBucketHandler<TRef, TAnchor>>>;
 
 /**
  * The host's durable transcript storage. `hasTranscript` backs the
@@ -87,16 +88,16 @@ export type CreateGranolaIngestOptions<
    * Per-bucket-type handlers, injected by the caller. A bucket type with no
    * handler here falls back to a no-op that only logs.
    */
-  handlers?: GranolaIngestHandlers<TRef>;
+  handlers?: GranolaIngestHandlers<TRef, TAnchor>;
   log?: Logger;
   /** Delay before the one retry for a not-yet-ready note. Defaults to 60s; overridable for tests. */
   retryDelayMs?: number;
 };
 
-function defaultHandler<TRef>(
+function defaultHandler<TRef, TAnchor>(
   bucketType: GranolaBucketType,
   logger: Logger,
-): GranolaBucketHandler<TRef> {
+): GranolaBucketHandler<TRef, TAnchor> {
   return async (context) => {
     logger.info(
       "No handler registered for bucket type {bucketType} — note {noteId} persisted but not otherwise processed",
@@ -242,8 +243,12 @@ export function createGranolaIngest<
   // duplicate is dropped with a notice rather than queued (see `processNote`).
   const inFlight = new Map<string, InFlightNote<TAnchor>>();
 
-  function handlerFor(bucketType: GranolaBucketType): GranolaBucketHandler<TRef> {
-    return handlers[bucketType] ?? defaultHandler(bucketType, logger);
+  function handlerFor(
+    bucketType: GranolaBucketType,
+  ): GranolaBucketHandler<TRef, TAnchor> {
+    return (
+      handlers[bucketType] ?? defaultHandler<TRef, TAnchor>(bucketType, logger)
+    );
   }
 
   async function notifyDuplicate(
@@ -554,7 +559,7 @@ export function createGranolaIngest<
         transcriptText: text,
         bucket,
         artifactRef,
-        threadAnchor: anchor as unknown as GranolaThreadAnchor,
+        threadAnchor: anchor,
         ...(state.pinnedCompanies !== undefined && {
           pinnedCompanies: state.pinnedCompanies,
         }),

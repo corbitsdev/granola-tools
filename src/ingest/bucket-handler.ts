@@ -20,13 +20,21 @@ export type GranolaThreadAnchor = { channel: string; ts: string };
  * ingest-triggered dispatch (the ack posted before this handler runs) — it
  * is optional only so handlers keep working standalone in tests/call sites
  * that construct a context with no ack thread to reply into.
+ *
+ * `TAnchor` mirrors the pipeline's own anchor type (established by
+ * `GranolaIngestLifecycle.onProcessingStarted`) — defaulted to
+ * `GranolaThreadAnchor` so existing single-type-argument call sites keep
+ * compiling unchanged.
  */
-export type GranolaBucketHandlerContext<TRef = unknown> = {
+export type GranolaBucketHandlerContext<
+  TRef = unknown,
+  TAnchor = GranolaThreadAnchor,
+> = {
   note: GranolaNote;
   transcriptText: string;
   bucket: GranolaBucket;
   artifactRef: TRef;
-  threadAnchor?: GranolaThreadAnchor;
+  threadAnchor?: TAnchor;
   /**
    * Set by a host's re-entry affordance (e.g. Scout's ambiguous-ask card):
    * the handler pins these companies on the run, skipping extraction.
@@ -34,6 +42,6 @@ export type GranolaBucketHandlerContext<TRef = unknown> = {
   pinnedCompanies?: string[];
 };
 
-export type GranolaBucketHandler<TRef = unknown> = (
-  context: GranolaBucketHandlerContext<TRef>,
+export type GranolaBucketHandler<TRef = unknown, TAnchor = GranolaThreadAnchor> = (
+  context: GranolaBucketHandlerContext<TRef, TAnchor>,
 ) => Promise<void>;
