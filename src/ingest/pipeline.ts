@@ -185,7 +185,9 @@ function isNoteReady(note: GranolaNote): boolean {
 function noteText(note: GranolaNote): string {
   const transcript = transcriptText(note).trim();
   if (transcript.length > 0) return transcript;
-  return (note.summary_text ?? "").trim();
+  const markdown = note.summary_markdown?.trim() ?? "";
+  if (markdown.length > 0) return markdown;
+  return note.summary_text?.trim() ?? "";
 }
 
 /**

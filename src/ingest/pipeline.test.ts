@@ -181,6 +181,26 @@ describe("createGranolaIngest", () => {
     ]);
   });
 
+  test("a summary-only note persists the summary markdown, never an empty artifact", async () => {
+    const summary = "## Summary\nDiscussed the pilot.";
+    const { transcripts, persisted } = fakeTranscripts();
+    const { lifecycle } = recordingLifecycle();
+
+    const onEvent = createGranolaIngest({
+      client: fakeClient([
+        noteWith({ transcript: undefined, summary_markdown: summary }),
+      ]),
+      bindingStore: fakeBindingStore(),
+      transcripts,
+      captureKnowledge: async () => {},
+      lifecycle,
+    });
+
+    await onEvent(samplePayload());
+
+    expect(persisted[0]?.text).toBe(summary);
+  });
+
   test("a note with no bound folder is ignored without lifecycle noise", async () => {
     const { transcripts, persisted } = fakeTranscripts();
     const { lifecycle, events } = recordingLifecycle();
