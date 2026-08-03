@@ -37,6 +37,11 @@
       "bun": "./src/ingress/index.ts",
       "types": "./dist/ingress/index.d.ts",
       "default": "./dist/ingress/index.js"
+    },
+    "./ingest": {
+      "bun": "./src/ingest/index.ts",
+      "types": "./dist/ingest/index.d.ts",
+      "default": "./dist/ingest/index.js"
     }
   },
   "files": [
@@ -54,6 +59,7 @@
     "check-deps": "bun run scripts/check-deps.ts",
     "test:tools": "bun test src/tools",
     "test:ingress": "bun test src/ingress",
+    "test:ingest": "bun test src/ingest",
     "test": "bun test src",
     "test:coverage": "bun test --coverage src"
   },
