@@ -13,7 +13,7 @@
     "webhook",
     "ingress"
   ],
-  "author": "Corbits",
+  "author": "Sawyer Cutler <sawyer@dirtroad.dev>",
   "homepage": "https://github.com/corbitsdev/corbits-granola#readme",
   "repository": {
     "type": "git",
@@ -23,7 +23,7 @@
     "url": "https://github.com/corbitsdev/corbits-granola/issues"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "main": "./dist/tools/index.js",
   "types": "./dist/tools/index.d.ts",
