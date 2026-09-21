@@ -2,7 +2,11 @@
 
 Granola meeting-notes client and agent tool definitions for Interchange hosts, plus optional webhook ingress and ingest. `@corbits/granola` is a REST client (`getNote` / `listNotes` / `listFolders`) and two grantable tool definitions. `@corbits/granola/ingress` verifies Granola webhooks and keeps registration converged. `@corbits/granola/ingest` turns an acked event into a persisted transcript and a bucket handler.
 
-## Install
+## Runtime support
+
+Node >= 24 consumes built `dist/`. Bun loads TypeScript source via the `bun` export condition. `@corbits/granola/ingress` also needs `hono` ^4 as a peer. The package never reads `process.env`; the host passes `apiKey`, `baseUrl`, and (for ingress) a public origin and signing secret.
+
+## Quickstart
 
 ```sh
 npm add @corbits/granola
@@ -10,10 +14,6 @@ pnpm add @corbits/granola
 yarn add @corbits/granola
 bun add @corbits/granola
 ```
-
-Requires Node >= 24. `@corbits/granola/ingress` also needs `hono` ^4 as a peer. The package never reads `process.env`; the host passes `apiKey`, `baseUrl`, and (for ingress) a public origin and signing secret.
-
-## Use
 
 ```ts
 import {
@@ -38,8 +38,6 @@ for (const tool of GRANOLA_TOOL_DEFINITIONS) {
 ```
 
 Tool names: `granola_fetch_note`, `granola_search_notes`. Handlers on those definitions are placeholders.
-
-## Full example
 
 Ingress mounts `POST /api/granola/webhook`. Ingest is everything after ack.
 
@@ -101,9 +99,11 @@ await ingest.reprocess(noteId);
 
 Three entry points, one dependency direction: tools never import ingress or ingest. `/ingress` verifies signatures, acks, and converges Granola-side `folder_ids`. `/ingest` is generic over the host's transcript ref and lifecycle anchor. A failed `onEvent` after ack is not redelivered; a later event or `ingest.reprocess(noteId)` is the recovery path.
 
-## Contributing
+## Development
 
 ```sh
+git clone https://github.com/corbitsdev/granola-tools.git
+cd granola-tools
 bun install
 bun run typecheck
 bun run test
