@@ -2,7 +2,7 @@
 
 A small, deliberately boring codebase: strict TypeScript, no magic.
 
-Setup and the commands are in the [README](./README.md#working-on-it). `bun run
+Setup and the commands are in the [README](./README.md#development). `bun run
 typecheck` must be clean — it is its own CI step, and `any` is not a way past it.
 
 ## Dependency rule
