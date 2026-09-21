@@ -22,6 +22,8 @@ tools, never the reverse — enforced structurally, see
 
 ## Install
 
+Requires Node.js >= 24.
+
 ```bash
 bun add github:corbitsdev/corbits-granola
 # or pin a commit:
