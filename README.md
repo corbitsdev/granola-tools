@@ -4,7 +4,7 @@ Granola meeting-notes client and agent tool definitions for Interchange hosts, p
 
 ## Runtime support
 
-Node >= 24 consumes built `dist/`. Bun loads TypeScript source via the `bun` export condition. `@corbits/granola/ingress` also needs `hono` ^4 as a peer. The package never reads `process.env`; the host passes `apiKey`, `baseUrl`, and (for ingress) a public origin and signing secret.
+Node >= 24 consumes built `dist/`. Bun loads TypeScript source via the `bun` export condition. `@corbits/granola/ingress` also needs `hono` ^4 as a peer. The host supplies `apiKey`, `baseUrl`, and (for ingress) a public origin and signing secret.
 
 ## Quickstart
 
@@ -97,7 +97,7 @@ await ingest.reprocess(noteId);
 
 ## How it works
 
-Three entry points, one dependency direction: tools never import ingress or ingest. `/ingress` verifies signatures, acks, and converges Granola-side `folder_ids`. `/ingest` is generic over the host's transcript ref and lifecycle anchor. A failed `onEvent` after ack is not redelivered; a later event or `ingest.reprocess(noteId)` is the recovery path.
+Three entry points, one dependency direction: ingress and ingest build on tools. `/ingress` verifies signatures, acks, and converges Granola-side `folder_ids`. `/ingest` is generic over the host's transcript ref and lifecycle anchor. A failed `onEvent` after ack is not redelivered; a later event or `ingest.reprocess(noteId)` is the recovery path.
 
 ## Development
 
