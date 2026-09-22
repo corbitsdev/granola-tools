@@ -1,53 +1,127 @@
 # @corbits/granola
 
-Granola meeting-notes client and agent tools for Corbits hosts, plus optional
-webhook ingress and ingest extensions. The base entry point is a plain REST
-client (`getNote` / `listNotes` / `listFolders`) and two grantable tool
-definitions; `/ingress` receives Granola webhooks, verifies signatures, and
-keeps the Granola-side webhook registration converged; `/ingest` is the
-host-agnostic pipeline that turns an acked webhook event into a persisted
-transcript and dispatched bucket handler.
-
-## Three entry points, one dependency direction
-
-| Entry point | What it is | Depends on |
-| --- | --- | --- |
-| `@corbits/granola` | Granola API client, note/folder types, agent tool definitions | nothing hub-shaped |
-| `@corbits/granola/ingress` | Webhook mount, signature verification, folder-binding store, webhook registration | `@corbits/granola`, `hono` (peer) |
-| `@corbits/granola/ingest` | Webhook event → note fetch → bucket dispatch → knowledge capture pipeline | `@corbits/granola` |
-
-The tools are usable standalone. `/ingress` and `/ingest` each depend on the
-tools, never the reverse — enforced structurally, see
+Granola meeting-notes tools for Interchange hosts: a REST client and agent
+tool definitions at the package root, a webhook receiver at `/ingress`, and a
+host-agnostic processing pipeline at `/ingest`. `/ingress` and `/ingest`
+depend on the root export; the root export depends on neither — see
 [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## Runtime support
+
+Node >= 24 consumes built `dist/`. Bun loads TypeScript source directly via
+the `bun` export condition. `@corbits/granola/ingress` additionally needs
+`hono` ^4 as a peer. Nothing in the package reads `process.env` itself — every
+credential, base URL, and store is a constructor argument the host supplies.
 
 ## Install
 
-Requires Node.js >= 24.
-
-```bash
-bun add github:corbitsdev/corbits-granola
-# or pin a commit:
-bun add github:corbitsdev/corbits-granola#<sha>
+```sh
+npm add @corbits/granola
+pnpm add @corbits/granola
+yarn add @corbits/granola
+bun add @corbits/granola
 ```
 
-Not on npm yet; consume from git or an `npm pack` tarball. The repository root
-*is* the package. `@corbits/granola/ingress` additionally requires `hono` ^4 as
-a peer dependency.
+Not on npm yet — install from git (`bun add github:corbitsdev/corbits-granola`,
+ideally pinned to a commit) until it is.
 
-## Configuration
+## Quickstart
 
-The package takes explicit options — it never reads `process.env` itself. A
-host supplies:
+A host mounts Granola end to end this way: build the folder-binding store,
+converge the Granola-side webhook registration, wire the ingest pipeline, and
+mount the webhook route on the host's Hono app. The host supplies persistence
+(`bindingsPort`, `transcripts`), enrichment (`captureKnowledge`), and how to
+render each pipeline event (`lifecycle`) — this package never touches storage
+or chat itself.
 
-| Option | Meaning | Typical env var (host-defined) |
-| --- | --- | --- |
-| `apiKey` | Granola API key, sent as `Authorization: Bearer` | `GRANOLA_API_KEY` |
-| `baseUrl` | Granola REST base URL; defaults to `https://public-api.granola.ai/v1` | `GRANOLA_API_BASE_URL` |
-| `publicUrl` | Public HTTPS origin your host is reachable at; used to compute the webhook delivery URL. `undefined` disables webhook registration/reconciliation | `GRANOLA_PUBLIC_URL` |
-| `envSecret` (ingress) | Pre-provisioned webhook signing secret, if you have one; otherwise `ensureGranolaWebhook` provisions one | `GRANOLA_WEBHOOK_SECRET` |
-| seed bindings (ingress) | Initial folder → bucket-type → channel bindings, `[{folderId, type, channel}]` with `type` one of `"diligence" | "internal"` | `GRANOLA_BUCKETS` (JSON) |
+```ts
+import type { Hono } from "hono";
+import { createGranolaClient, type GranolaBucket } from "@corbits/granola";
+import {
+  createGranolaBindingStore,
+  ensureGranolaWebhook,
+  mountGranolaWebhook,
+  reconcileGranolaWebhookFolders,
+  type GranolaBindingsPort,
+} from "@corbits/granola/ingress";
+import {
+  createGranolaIngest,
+  type GranolaTranscriptStore,
+  type GranolaKnowledgeCapture,
+  type GranolaIngestLifecycle,
+} from "@corbits/granola/ingest";
 
-## Quickstart: client and tools (no webhook)
+export async function installGranolaIngestion(
+  app: Hono,
+  config: {
+    apiKey: string;
+    baseUrl: string;
+    publicUrl: string | undefined; // undefined disables webhook registration
+    envSecret: string | undefined; // GRANOLA_WEBHOOK_SECRET, if already provisioned
+    tenantId: string;
+    principalId: string;
+    bindingsPort: GranolaBindingsPort<GranolaBucket>; // host's own storage
+    seedBindings: GranolaBucket[];
+    transcripts: GranolaTranscriptStore; // host's transcript persistence
+    captureKnowledge: GranolaKnowledgeCapture; // host's enrichment step
+    lifecycle: GranolaIngestLifecycle; // host renders each pipeline event
+  },
+): Promise<void> {
+  const { apiKey, baseUrl, publicUrl } = config;
+
+  const bindingStore = createGranolaBindingStore({
+    port: config.bindingsPort,
+    tenantId: config.tenantId,
+    principalId: config.principalId,
+    seedBindings: config.seedBindings,
+    onChange: (bindings) =>
+      publicUrl === undefined
+        ? undefined
+        : reconcileGranolaWebhookFolders({
+            apiKey,
+            baseUrl,
+            publicUrl,
+            folderIds: bindings.map((bucket) => bucket.folderId),
+          }),
+  });
+
+  // Registers (or verifies) the webhook endpoint with Granola and returns
+  // its signing secret. undefined means nothing to mount with (no publicUrl
+  // and no envSecret, or reconciliation failed with no fallback secret).
+  const secret = await ensureGranolaWebhook({
+    apiKey,
+    baseUrl,
+    publicUrl,
+    bindingStore,
+    envSecret: config.envSecret,
+  });
+  if (secret === undefined) return;
+
+  const ingest = createGranolaIngest({
+    client: createGranolaClient({ apiKey, baseUrl }),
+    bindingStore,
+    transcripts: config.transcripts,
+    captureKnowledge: config.captureKnowledge,
+    lifecycle: config.lifecycle,
+  });
+
+  // Mounts POST /api/granola/webhook. Signatures are verified and the
+  // request is acked before `ingest` runs; a failed `ingest` after ack is
+  // not redelivered by Granola — a later event for the same note (or
+  // `ingest.reprocess(noteId)`) is the recovery path.
+  mountGranolaWebhook(app, { secret, onEvent: ingest });
+}
+```
+
+Per-bucket-type behavior (e.g. what happens once a note is persisted) is
+injected through `createGranolaIngest`'s `handlers` option — one
+`GranolaBucketHandler` per `GranolaBucketType` — not shown above.
+
+## Lower-level: client and tool definitions
+
+The package root has no dependency on `/ingress` or `/ingest` — it can be
+imported and its tools granted to any agent standalone, with nothing
+hub-shaped attached.
 
 ```ts
 import {
@@ -56,156 +130,51 @@ import {
   GRANOLA_TOOL_DEFINITIONS,
 } from "@corbits/granola";
 
-const client = createGranolaClient({ apiKey: process.env.GRANOLA_API_KEY! });
+const client = createGranolaClient({ apiKey: process.env["GRANOLA_API_KEY"]! });
 
-const { notes } = await client.listNotes({ limit: 10 });
-const note = await client.getNote(notes[0].id);
+const { folders } = await client.listFolders();
+const folderId = folders[0]?.id;
+if (folderId === undefined) throw new Error("no folders");
+
+const { notes } = await client.listNotes({ folderId, pageSize: 10 });
+const note = await client.getNote(notes[0]!.id, { includeTranscript: true });
 console.log(note.title, transcriptText(note));
 
-// Grant to any agent like any other Interchange tool — no hub required.
-// Tool names: granola_fetch_note, granola_search_notes.
-for (const tool of GRANOLA_TOOL_DEFINITIONS) grant(tool);
+for (const tool of GRANOLA_TOOL_DEFINITIONS) {
+  console.log(tool.name, "-", tool.description);
+}
 ```
 
-## Quickstart: webhook ingress
+`GRANOLA_TOOL_DEFINITIONS` currently holds `granola_fetch_note` and
+`granola_search_notes`; both handlers throw `not implemented` today —
+grantable shape, no working body yet.
 
-Mounting is three steps: build a binding store, converge the Granola-side
-webhook registration, then mount the webhook route on a Hono app. This is the
-pattern Scout uses in production, simplified:
+## How it works
 
-```ts
-import { Hono } from "hono";
-import { createGranolaClient } from "@corbits/granola";
-import {
-  createGranolaBindingStore,
-  ensureGranolaWebhook,
-  mountGranolaWebhook,
-  reconcileGranolaWebhookFolders,
-} from "@corbits/granola/ingress";
+`src/tools` is the client and tool shapes — no hub, mounting, extension, or
+webhook dependency, enforced by `bun run check-deps`. `src/ingress` verifies
+and mounts the webhook and keeps the Granola-side registration converged.
+`src/ingest` is everything after ack: fetch the note, resolve which bucket
+its folder is bound to, persist the transcript, capture knowledge, then
+dispatch to that bucket type's handler — generic over the host's transcript
+ref and lifecycle anchor types, so it never assumes a specific chat client or
+storage schema.
 
-const apiKey = process.env.GRANOLA_API_KEY!;
-const baseUrl = "https://public-api.granola.ai/v1";
-const publicUrl = process.env.GRANOLA_PUBLIC_URL; // https:// origin, or undefined
-
-// 1. Durable folder -> bucket-type -> channel bindings. `port` is your
-//    persistence adapter (implement GranolaBindingsPort over your own store).
-const bindingStore = createGranolaBindingStore({
-  port: myBindingsPort,
-  tenantId,
-  principalId,
-  seedBindings: [], // or parsed GRANOLA_BUCKETS
-  onChange: (bindings) =>
-    publicUrl === undefined
-      ? undefined
-      : reconcileGranolaWebhookFolders({
-          apiKey,
-          baseUrl,
-          publicUrl,
-          folderIds: bindings.map((b) => b.folderId),
-        }),
-});
-
-// 2. Register (or verify) the webhook endpoint with Granola. Returns the
-//    signing secret; undefined means registration could not happen (e.g. no
-//    publicUrl and no envSecret) — skip mounting in that case.
-const secret = await ensureGranolaWebhook({
-  apiKey,
-  baseUrl,
-  publicUrl,
-  bindingStore,
-  envSecret: process.env.GRANOLA_WEBHOOK_SECRET,
-});
-if (secret === undefined) return;
-
-// 3. Mount. POSTs land at /api/granola/webhook; signatures are verified
-//    before your handler runs, and events are acked before dispatch.
-const app = new Hono();
-mountGranolaWebhook(app, {
-  secret,
-  onEvent: async (payload) => {
-    const note = await createGranolaClient({ apiKey, baseUrl }).getNote(payload.noteId);
-    // route by bindingStore lookup on the note's folder…
-  },
-});
-```
-
-The webhook route is `POST /api/granola/webhook` on whatever app you pass in.
-A failed `onEvent` after ack is not redelivered by Granola; a later event for
-the same note (or a manual re-drop) is the recovery path.
-
-## Quickstart: ingest pipeline
-
-`/ingress` mounts the webhook, verifies it, and acks; `/ingest` is the
-processing pipeline behind it — everything downstream of that ack: fetch the
-note, resolve its bucket, persist the transcript, capture knowledge, then
-dispatch to a bucket-type handler. It's chat- and host-agnostic, generic over
-`TRef` (whatever your transcript store's `persist` returns) and `TAnchor`
-(whatever your `lifecycle.onProcessingStarted` returns) — both threaded
-through unexamined.
-
-```ts
-import { createGranolaClient } from "@corbits/granola";
-import { mountGranolaWebhook } from "@corbits/granola/ingress";
-import { createGranolaIngest } from "@corbits/granola/ingest";
-
-const ingest = createGranolaIngest({
-  client: createGranolaClient({ apiKey, baseUrl }),
-  bindingStore,
-  transcripts: myTranscriptStore, // { hasTranscript, persist } -> TRef
-  captureKnowledge: myKnowledgeCapture,
-  lifecycle: myLifecycle, // onProcessingStarted, onTranscriptReady, ... -> TAnchor
-  handlers: { diligence: myDiligenceHandler, internal: myInternalHandler },
-});
-
-mountGranolaWebhook(app, { secret, onEvent: ingest });
-
-// A host's "reprocess" affordance re-enters bypassing the already-processed gate.
-await ingest.reprocess(noteId);
-```
-
-## API surface
-
-`@corbits/granola`
-
-- `createGranolaClient(options)` → `{ getNote, listNotes, listFolders }`
-- `transcriptText(note)` / `speakerLabel(speaker)` — transcript helpers
-- `GranolaNote`, `GranolaBucket`, `GranolaBucketType`, `GranolaBucketsArray` — validated data shapes (arktype)
-- `fetchNoteTool`, `searchNotesTool`, `GRANOLA_TOOL_DEFINITIONS` — agent tool definitions
-- `GranolaApiError` — thrown on non-2xx API responses
-
-`@corbits/granola/ingress`
-
-- `mountGranolaWebhook(app, {secret, onEvent})` — mounts `POST /api/granola/webhook`
-- `ensureGranolaWebhook(options)` — registers/verifies the webhook with Granola, returns the signing secret
-- `reconcileGranolaWebhookFolders(options)` — keeps the registration's `folder_ids` matching your bindings
-- `createGranolaBindingStore(options)` — durable folder bindings over a host-supplied `GranolaBindingsPort`
-- `verifyGranolaSignature` / `signGranolaPayload` / `parseGranolaPayload` — signature primitives, if you mount by hand
-
-`@corbits/granola/ingest`
-
-- `createGranolaIngest(options)` → `GranolaIngest` — the webhook `onEvent` handler, plus `.reprocess(noteId)` / `.reprocessPinned(noteId, companies)` re-entry
-- `GranolaIngestHandlers`, `GranolaBucketHandler`, `GranolaBucketHandlerContext`, `GranolaThreadAnchor` — the per-bucket-type handler contract
-- `GranolaIngestLifecycle` — the human-visible-event hooks a host implements to render its own copy
-- `GranolaTranscriptStore`, `GranolaKnowledgeCapture` — the persistence and enrichment ports a host supplies
-
-## Used in production
-
-Scout mounts this package end to end — client construction, binding store,
-webhook registration, and event dispatch — in
-`packages/scout/src/granola/mount.ts` and reads its env in
-`packages/scout/src/granola/config.ts` of the Scout repository. That wiring is
-the reference consumer for everything above.
-
-## Working on it
+## Development
 
 ```sh
+git clone https://github.com/corbitsdev/granola-tools.git
+cd granola-tools
 bun install
 bun run typecheck
 bun run test
+bun run check-deps
 bun run build
 ```
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [ARCHITECTURE.md](./ARCHITECTURE.md).
+`bun run test:tools` / `test:ingress` / `test:ingest` run each face's tests
+independently. See [CONTRIBUTING.md](./CONTRIBUTING.md) and
+[ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## License
 
