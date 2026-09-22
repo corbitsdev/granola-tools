@@ -5,7 +5,7 @@
     "": {
       "name": "@corbits/granola",
       "dependencies": {
-        "@intx/log": "0.2.2",
+        "@intx/log": "0.4.0",
         "arktype": "^2.1.29",
       },
       "devDependencies": {
@@ -24,7 +24,7 @@
 
     "@ark/util": ["@ark/util@0.56.2", "", {}, "sha512-9kU2sUE38FZEGG7l3hamYMBieLYEJh2L1mrYD2eXpT+78EnQSV1bhjxJhnxGBMSTbtwpBSDNSK+K60WvaI/DTQ=="],
 
-    "@intx/log": ["@intx/log@0.2.2", "", { "dependencies": { "@logtape/hono": "^2.0.2", "@logtape/logtape": "^2.0.2" }, "peerDependencies": { "hono": "^4.0.0" }, "optionalPeers": ["hono"] }, "sha512-Rlkd4pvyXwlqkm6hui97VwuTytqgOmenvbdaHAFdYr1e6DHHhGu7ZodUEsLiF4993qJmWNHGlNbHEgQY1LNPrQ=="],
+    "@intx/log": ["@intx/log@0.4.0", "", { "dependencies": { "@logtape/hono": "^2.0.2", "@logtape/logtape": "^2.0.2" }, "peerDependencies": { "hono": "^4.0.0" }, "optionalPeers": ["hono"] }, "sha512-f1IPZ/9YpEqlA0I2UZPOlRJOTDoOFEZRwZoUVuw8DpgR1WatOMm4hA0E8o6Mtz+pA0ux7gVdls4y/JZcgypsfQ=="],
 
     "@logtape/hono": ["@logtape/hono@2.3.0", "", { "peerDependencies": { "@logtape/logtape": "^2.3.0", "hono": "^4.0.0" } }, "sha512-+aYoPfhEeOVW1hiQwx7Tv2fbNSbOPQhx5EBZ/8JXAXt9j1w0h63X0M/MjyhjBh6Mp22gnOdNLTF6l5Tg2RIcJw=="],
 
