@@ -27,8 +27,7 @@ ideally pinned to a commit) until it is.
 
 ## Quickstart
 
-Scout mounts Granola end to end this way, in
-`packages/scout/src/granola/mount.ts`: build the folder-binding store,
+A host mounts Granola end to end this way: build the folder-binding store,
 converge the Granola-side webhook registration, wire the ingest pipeline, and
 mount the webhook route on the host's Hono app. The host supplies persistence
 (`bindingsPort`, `transcripts`), enrichment (`captureKnowledge`), and how to
