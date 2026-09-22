@@ -2,9 +2,11 @@
 
 Granola meeting-notes client and agent tool definitions for Interchange hosts, plus optional webhook ingress and ingest. `@corbits/granola` is a REST client (`getNote` / `listNotes` / `listFolders`) and two grantable tool definitions. `@corbits/granola/ingress` verifies Granola webhooks and keeps registration converged. `@corbits/granola/ingest` turns an acked event into a persisted transcript and a bucket handler.
 
-## Quickstart
+## Runtime support
 
 Node >= 24 consumes built `dist/`. Bun loads TypeScript source via the `bun` export condition. `@corbits/granola/ingress` also needs `hono` ^4 as a peer. The host supplies `apiKey`, `baseUrl`, and (for ingress) a public origin and signing secret.
+
+## Quickstart
 
 ```sh
 npm add @corbits/granola
@@ -37,121 +39,7 @@ for (const tool of GRANOLA_TOOL_DEFINITIONS) {
 
 Tool names: `granola_fetch_note`, `granola_search_notes`. Handlers on those definitions are placeholders.
 
-Ingress mounts `POST /api/granola/webhook`. Ingest is everything after ack.
-
-```ts
-import { Hono } from "hono";
-import { createGranolaClient, type GranolaBucket } from "@corbits/granola";
-import {
-  createGranolaBindingStore,
-  ensureGranolaWebhook,
-  mountGranolaWebhook,
-  reconcileGranolaWebhookFolders,
-  type GranolaBindingsPort,
-} from "@corbits/granola/ingress";
-import {
-  createGranolaIngest,
-  type GranolaIngestHandlers,
-  type GranolaIngestLifecycle,
-  type GranolaKnowledgeCapture,
-  type GranolaTranscriptStore,
-} from "@corbits/granola/ingest";
-
-const apiKey = process.env.GRANOLA_API_KEY!;
-const baseUrl = "https://public-api.granola.ai/v1";
-const publicUrl = process.env.GRANOLA_PUBLIC_URL;
-const app = new Hono();
-
-// Host-owned: back this port with the host's own durable storage (shown in-memory).
-const stored = new Map<string, { bindings: GranolaBucket[]; version: number }>();
-const port: GranolaBindingsPort<GranolaBucket> = {
-  async load({ tenantId }) {
-    return stored.get(tenantId);
-  },
-  async save({ tenantId, bindings }) {
-    const version = (stored.get(tenantId)?.version ?? 0) + 1;
-    stored.set(tenantId, { bindings, version });
-  },
-};
-
-// Host-owned: the host's own tenant and operator.
-const tenantId = "tenant-1";
-const principalId = "operator-1";
-
-const bindingStore = createGranolaBindingStore({
-  port,
-  tenantId,
-  principalId,
-  seedBindings: [],
-  onChange: (bindings) => {
-    if (publicUrl === undefined) return undefined;
-    return reconcileGranolaWebhookFolders({
-      apiKey,
-      baseUrl,
-      publicUrl,
-      folderIds: bindings.map((b) => b.folderId),
-    });
-  },
-});
-
-const secret = await ensureGranolaWebhook({
-  apiKey,
-  baseUrl,
-  publicUrl,
-  bindingStore,
-  envSecret: process.env.GRANOLA_WEBHOOK_SECRET,
-});
-if (secret === undefined) throw new Error("granola webhook not registered");
-
-// Host-owned: persist transcripts in the host's own store; persist returns the host's ref.
-const transcripts: GranolaTranscriptStore<string> = {
-  async hasTranscript() {
-    return false;
-  },
-  async persist({ granolaNoteId }) {
-    return granolaNoteId;
-  },
-};
-
-// Host-owned: enrich the persisted artifact (embeddings, knowledge graph, ...).
-const captureKnowledge: GranolaKnowledgeCapture<string> = async () => {};
-
-// Host-owned: render every human-visible event in the host's own chat.
-const lifecycle: GranolaIngestLifecycle = {
-  async onDuplicateEvent() {},
-  async onFetchFailed() {},
-  async onNoteNotGenerated() {},
-  async onAlreadyProcessed() {},
-  async onProcessingStarted() {
-    return { channel: "granola", ts: "ack" };
-  },
-  async onNoteNotReady() {},
-  async onTranscriptReady() {},
-  async onPersistFailed() {},
-  async onHandlerDispatching() {},
-  async onHandlerFailed() {},
-};
-
-// Host-owned: one behavior per bucket type; a type with no handler logs and no-ops.
-const handlers: GranolaIngestHandlers<string> = {
-  diligence: async () => {},
-  internal: async () => {},
-};
-
-const ingest = createGranolaIngest({
-  client: createGranolaClient({ apiKey, baseUrl }),
-  bindingStore,
-  transcripts,
-  captureKnowledge,
-  lifecycle,
-  handlers,
-});
-
-mountGranolaWebhook(app, { secret, onEvent: ingest });
-
-// Example: re-enter the pipeline for one known note, bypassing the already-processed gate.
-await ingest.reprocess("note-123");
-```
+Ingress mounts `POST /api/granola/webhook` via `mountGranolaWebhook` (backed by `createGranolaBindingStore`, `ensureGranolaWebhook`, and `reconcileGranolaWebhookFolders` from `@corbits/granola/ingress`); ingest is everything after ack via `createGranolaIngest` from `@corbits/granola/ingest`, with the host supplying the transcript store, knowledge capture, lifecycle, and bucket handlers.
 
 ## How it works
 
