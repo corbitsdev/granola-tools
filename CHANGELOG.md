@@ -24,4 +24,4 @@ separately.
 - CI: dependency check, typecheck, tools tests, ingress tests and build each run as
   separate jobs.
 
-[Unreleased]: https://github.com/corbitsdev/corbits-granola
+[Unreleased]: https://github.com/corbitsdev/granola-tools

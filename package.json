@@ -32,17 +32,14 @@
   "types": "./dist/tools/index.d.ts",
   "exports": {
     ".": {
-      "bun": "./src/tools/index.ts",
       "types": "./dist/tools/index.d.ts",
       "default": "./dist/tools/index.js"
     },
     "./ingress": {
-      "bun": "./src/ingress/index.ts",
       "types": "./dist/ingress/index.d.ts",
       "default": "./dist/ingress/index.js"
     },
     "./ingest": {
-      "bun": "./src/ingest/index.ts",
       "types": "./dist/ingest/index.d.ts",
       "default": "./dist/ingest/index.js"
     }

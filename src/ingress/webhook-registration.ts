@@ -36,7 +36,7 @@
 import { type } from "arktype";
 import { getLogger } from "@intx/log";
 
-import type { GranolaBindingStore } from "./binding-store";
+import type { GranolaBindingStore } from "./binding-store.js";
 
 const log = getLogger(["corbits", "granola", "webhook-registration"]);
 
