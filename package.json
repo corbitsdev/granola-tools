@@ -14,13 +14,16 @@
     "ingress"
   ],
   "author": "Sawyer Cutler <sawyer@dirtroad.dev>",
-  "homepage": "https://github.com/corbitsdev/corbits-granola#readme",
+  "homepage": "https://github.com/corbitsdev/granola-tools#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/corbitsdev/corbits-granola.git"
+    "url": "git+https://github.com/corbitsdev/granola-tools.git"
   },
   "bugs": {
-    "url": "https://github.com/corbitsdev/corbits-granola/issues"
+    "url": "https://github.com/corbitsdev/granola-tools/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=24"
