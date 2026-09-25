@@ -8,10 +8,10 @@ depend on the root export; the root export depends on neither — see
 
 ## Runtime support
 
-Node >= 24 consumes built `dist/`. Bun loads TypeScript source directly via
-the `bun` export condition. `@corbits/granola/ingress` additionally needs
-`hono` ^4 as a peer. Nothing in the package reads `process.env` itself — every
-credential, base URL, and store is a constructor argument the host supplies.
+All runtimes (including Bun) consume built `dist/`. `@corbits/granola/ingress`
+additionally needs `hono` ^4 as a peer. Nothing in the package reads
+`process.env` itself — every credential, base URL, and store is a constructor
+argument the host supplies.
 
 ## Install
 
@@ -22,7 +22,7 @@ yarn add @corbits/granola
 bun add @corbits/granola
 ```
 
-Not on npm yet — install from git (`bun add github:corbitsdev/corbits-granola`,
+Not on npm yet — install from git (`bun add github:corbitsdev/granola-tools`,
 ideally pinned to a commit) until it is.
 
 ## Quickstart

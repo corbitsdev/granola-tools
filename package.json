@@ -14,13 +14,16 @@
     "ingress"
   ],
   "author": "Sawyer Cutler <sawyer@dirtroad.dev>",
-  "homepage": "https://github.com/corbitsdev/corbits-granola#readme",
+  "homepage": "https://github.com/corbitsdev/granola-tools#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/corbitsdev/corbits-granola.git"
+    "url": "git+https://github.com/corbitsdev/granola-tools.git"
   },
   "bugs": {
-    "url": "https://github.com/corbitsdev/corbits-granola/issues"
+    "url": "https://github.com/corbitsdev/granola-tools/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=24"
@@ -29,25 +32,20 @@
   "types": "./dist/tools/index.d.ts",
   "exports": {
     ".": {
-      "bun": "./src/tools/index.ts",
       "types": "./dist/tools/index.d.ts",
       "default": "./dist/tools/index.js"
     },
     "./ingress": {
-      "bun": "./src/ingress/index.ts",
       "types": "./dist/ingress/index.d.ts",
       "default": "./dist/ingress/index.js"
     },
     "./ingest": {
-      "bun": "./src/ingest/index.ts",
       "types": "./dist/ingest/index.d.ts",
       "default": "./dist/ingest/index.js"
     }
   },
   "files": [
     "dist",
-    "src",
-    "!src/**/*.test.ts",
     "LICENSE",
     "README.md"
   ],
