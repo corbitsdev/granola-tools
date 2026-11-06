@@ -1,6 +1,6 @@
 {
   "name": "@corbits/granola",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "license": "LGPL-2.1-only",
   "description": "Granola meeting-notes tools for Corbits agents, with an optional webhook ingress extension.",
@@ -62,7 +62,7 @@
     "test:coverage": "bun test --coverage src"
   },
   "dependencies": {
-    "@intx/log": "0.4.0",
+    "@intx/log": "^0.5.0",
     "arktype": "^2.1.29"
   },
   "peerDependencies": {
